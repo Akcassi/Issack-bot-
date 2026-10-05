@@ -3,21 +3,33 @@ http.createServer((req,res) => res.end('ISSACK BOT IS LIVE')).listen(process.env
 
 import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys'
 import P from 'pino'
+
 const PHONE = "919863955589"
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('./auth')
-    const sock = makeWASocket({ auth: state, logger: P({ level: 'silent' }), browser: ["Ubuntu","Chrome","20.0"] })
+    const sock = makeWASocket({
+        auth: state,
+        logger: P({ level: 'silent' }),
+        browser: ["Ubuntu","Chrome","20.0"]
+    })
     sock.ev.on('creds.update', saveCreds)
+
+    if(!sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                let code = await sock.requestPairingCode(PHONE)
+                console.log(`PAIRING CODE: ${code}`)
+            } catch(e){ console.log(e) }
+        }, 5000)
+    }
 
     sock.ev.on('connection.update', async (u) => {
         if(u.connection === 'open') {
             console.log('BOT CONNECTED!')
-            // A nung tih i hriat nan nangmah ah message a lo thawn ang
-            try { await sock.sendMessage(PHONE+"@s.whatsapp.net", { text: "✅ ISSACK BOT A NUNG TA E! Tun ah.thu hmang thei tawh ang!" }) } catch(e){}
         }
         if(u.connection === 'close') {
-            let shouldReconnect = u.lastDisconnect?.error?.output?.statusCode!== DisconnectReason.loggedOut
+            let shouldReconnect = u.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
             if(shouldReconnect) startBot()
         }
     })
@@ -30,7 +42,7 @@ async function startBot() {
 
         if(body.toLowerCase().startsWith(".thu ")) {
             let c = body.slice(5).split("|")
-            if(c.length < 2) { await sock.sendMessage(from, { text: "Format:.thu HEADING | MESSAGE" }); return }
+            if(c.length < 2) { await sock.sendMessage(from, { text: "Format: .thu HEADING | MESSAGE" }); return }
             let head = c[0].trim().toUpperCase()
             let mess = c.slice(1).join("|").trim()
             let caption = `*${head}*\n━━━━━━━━━━━━\n\n${mess}\n\n━━━━━━━━━━━━`
@@ -48,7 +60,7 @@ async function startBot() {
             } catch(e) { await sock.sendMessage(from, { text: caption }) }
         }
         if(body.toLowerCase() === ".menu") {
-            await sock.sendMessage(from, { text: "*ISSACK BOT NUNG E!*\n\n.thu HEADING | MESSAGE\nEntir:.thu THUPUAN | Naktuk inkhawm" })
+            await sock.sendMessage(from, { text: "*ISSACK BOT NUNG E!*\n\n.thu HEADING | MESSAGE" })
         }
     })
 }
