@@ -1,3 +1,6 @@
+import http from 'http'
+http.createServer((req,res) => res.end('ISSACK BOT RUNNING')).listen(process.env.PORT || 10000)
+
 import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys'
 import P from 'pino'
 
@@ -24,7 +27,7 @@ async function startBot() {
     sock.ev.on('connection.update', async (u) => {
         if(u.connection === 'open') console.log('BOT CONNECTED!')
         if(u.connection === 'close') {
-            let shouldReconnect = u.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
+            let shouldReconnect = u.lastDisconnect?.error?.output?.statusCode!== DisconnectReason.loggedOut
             if(shouldReconnect) startBot()
         }
     })
@@ -32,49 +35,37 @@ async function startBot() {
     sock.ev.on('messages.upsert', async (m) => {
         let msg = m.messages[0]
         if(!msg.message) return
-        
         let from = msg.key.remoteJid
-        let isFromMe = msg.key.fromMe
-        
-        // Bot number leh a thawn na hmun
         let body = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || ""
-
-        console.log(`Message: ${body} | FromMe: ${isFromMe}`)
+        console.log(`Msg: ${body}`)
 
         if(body.toLowerCase().startsWith(".thu ")) {
             let c = body.slice(5).split("|")
             if(c.length < 2) {
-                await sock.sendMessage(from, { text: "❌ Format dik lo!\n\n✅ .thu HEADING | MESSAGE\n\nEntir: .thu THUPUAN | Naktuk inkhawm" })
+                await sock.sendMessage(from, { text: "Format:.thu HEADING | MESSAGE" })
                 return
             }
             let head = c[0].trim().toUpperCase()
             let mess = c.slice(1).join("|").trim()
-            let caption = `*${head}*\n━━━━━━━━━━━━\n\n${mess}\n\n━━━━━━━━━━━━\n© Issack-Bot`
+            let caption = `*${head}*\n━━━━━━━━━━━━\n\n${mess}\n\n━━━━━━━━━━━━`
 
             try {
-                // Thlalak nei em?
                 if(msg.message.imageMessage) {
                     let buf = await sock.downloadMediaMessage(msg, 'buffer', {})
                     await sock.sendMessage(from, { image: buf, caption: caption })
-                    console.log("Sent with image - fromMe")
                 } else if(msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
                     let q = { key: { remoteJid: from, id: msg.message.extendedTextMessage.contextInfo.stanzaId }, message: msg.message.extendedTextMessage.contextInfo.quotedMessage }
                     let buf = await sock.downloadMediaMessage(q, 'buffer', {})
                     await sock.sendMessage(from, { image: buf, caption: caption })
-                } else if(msg.message.videoMessage) {
-                    let buf = await sock.downloadMediaMessage(msg, 'buffer', {})
-                    await sock.sendMessage(from, { video: buf, caption: caption })
                 } else {
                     await sock.sendMessage(from, { text: caption })
                 }
             } catch(e) {
-                console.log("Error:", e)
                 await sock.sendMessage(from, { text: caption })
             }
         }
-
         if(body.toLowerCase() === ".menu") {
-            await sock.sendMessage(from, { text: "*ISSACK THU BOT - A NUNG E!*\n\n📌 Thlalak thawn la caption:\n.thu HEADING | MESSAGE\n\nEntir:\n.thu KOHHRAN THUPUAN | Naktuk chawhma inkhawm\n\n📌 Reply in pawh:\nThlalak reply la .thu HEADING | MSG ti rawh" })
+            await sock.sendMessage(from, { text: "*ISSACK BOT NUNG E!*\n.thu HEADING | MESSAGE" })
         }
     })
 }
