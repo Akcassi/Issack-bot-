@@ -2,7 +2,6 @@ import http from 'http'
 http.createServer((req,res) => res.end('BOT LIVE')).listen(process.env.PORT || 10000)
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, downloadMediaMessage } from '@whiskeysockets/baileys'
 import P from 'pino'
-import Jimp from 'jimp'
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('./auth')
@@ -22,56 +21,35 @@ async function startBot() {
 
             let content = body.slice(body.toLowerCase().indexOf(".thu")+4).trim()
             if(!content.includes("|")) {
-                await sock.sendMessage(from, { text: "Hman dan:.thu HEADING | THU DANG\nPic nen thawn rawh!" })
+                await sock.sendMessage(from, { text: "Hman dan:\n.thu HEADING | FOOTER\n\nPic nen thawn la, heading chung ah, pic lai ah, footer hnuai ah a awm ang!" })
                 return
             }
+
             let parts = content.split("|")
-            let head = parts[0].trim().toUpperCase()
-            let foot = parts.slice(1).join("|").trim()
+            let heading = parts[0].trim()
+            let footer = parts.slice(1).join("|").trim()
 
             let buf = null
-            if(msg.message.imageMessage) buf = await downloadMediaMessage(msg, 'buffer', {}, { logger: P({level:'silent'}), reuploadRequest: sock.updateMediaMessage })
-            else if(msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
+            if(msg.message.imageMessage) {
+                buf = await downloadMediaMessage(msg, 'buffer', {}, { logger: P({level:'silent'}), reuploadRequest: sock.updateMediaMessage })
+            } else if(msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
                 let q = { key: { remoteJid: from, id: msg.message.extendedTextMessage.contextInfo.stanzaId }, message: msg.message.extendedTextMessage.contextInfo.quotedMessage }
                 buf = await downloadMediaMessage(q, 'buffer', {}, { logger: P({level:'silent'}), reuploadRequest: sock.updateMediaMessage })
             }
+
             if(!buf) {
-                await sock.sendMessage(from, { text: `*${head}*\n\n${foot}` })
+                // Pic tel lo chuan text chiah
+                await sock.sendMessage(from, { text: `*${heading.toUpperCase()}*\n━━━━━━━━━━━━\n\n${footer}` })
                 return
             }
 
-            // SIAM THAR - HEADING + PIC + FOOTER in zawm vek
-            let image = await Jimp.read(buf)
-            let W = 800
-            image.resize(W, Jimp.AUTO)
+            // 1. HEADING CHUNG AH
+            await sock.sendMessage(from, { text: `*${heading.toUpperCase()}*\n━━━━━━━━━━━━━━━━━━━━` })
 
-            let fontHead = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK)
-            let fontHeadWhite = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE)
-            let fontFoot = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK)
+            // 2. THLALAK + FOOTER HNUAI AH
+            await sock.sendMessage(from, { image: buf, caption: `${footer}\n\n━━━━━━━━━━━━━━━━━━━━` })
 
-            let headH = 120
-            let footH = 180
-            let newH = image.bitmap.height + headH + footH
-
-            let finalImg = new Jimp(W, newH, 0xffffffff)
-
-            // Heading background - dum deuh
-            let topBar = new Jimp(W, headH, 0x000000ff)
-            finalImg.composite(topBar, 0, 0)
-            finalImg.print(fontHeadWhite, 20, 20, { text: head, alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER }, W-40, headH)
-
-            // Pic lai ah
-            finalImg.composite(image, 0, headH)
-
-            // Footer background - var
-            let bottomBar = new Jimp(W, footH, 0xffffffff)
-            finalImg.composite(bottomBar, 0, headH + image.bitmap.height)
-            finalImg.print(fontFoot, 20, headH + image.bitmap.height + 20, { text: foot, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, W-40, footH-40)
-
-            let outBuf = await finalImg.getBufferAsync(Jimp.MIME_JPEG)
-
-            await sock.sendMessage(from, { image: outBuf, caption: `✅ *${head}* poster siam a ni e!` })
-            console.log("Poster sent!")
+            console.log("Sent heading + pic + footer!")
 
         } catch(e){ console.log(e) }
     })
