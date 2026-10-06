@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
+  "scripts": { "start": "node index.js" },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.18",
+    "jimp": "^0.16.13",
     "pino": "^8.16.0",
     "qrcode-terminal": "^0.12.0"
   }
